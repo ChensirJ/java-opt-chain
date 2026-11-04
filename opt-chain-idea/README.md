@@ -49,4 +49,4 @@ IntelliJ IDEA 插件：让 `java-opt-chain` 工程里的 Java 源码可以直接
 
 ## 限制
 
-见仓库根 README「IDEA 插件」小节。
+见仓库根 README 的 “IDEA plugin (`opt-chain-idea`)” 一节。

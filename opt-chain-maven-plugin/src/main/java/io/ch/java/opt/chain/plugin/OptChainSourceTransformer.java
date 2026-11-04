@@ -164,16 +164,9 @@ public final class OptChainSourceTransformer {
     }
 
     private static boolean hasOptChainBefore(String src, int declStart, int bodyOpen) {
-        // Only the region after the previous member boundary and before the method body,
-        // ignoring comments/strings so javadoc text like "{@code @OptChain}" does not count.
-        int boundary = declStart - 1;
-        while (boundary >= 0) {
-            char ch = src.charAt(boundary);
-            if (ch == '{' || ch == '}' || ch == ';') {
-                break;
-            }
-            boundary--;
-        }
+        // Only the region after the previous code-level member boundary and before the method body.
+        // Comments and strings are skipped, so javadoc text like "{@code @OptChain}" does not count.
+        int boundary = lastCodeDelimiterBefore(src, declStart);
         int from = Math.max(0, boundary + 1);
         return containsOptChainAnnotation(src, from, bodyOpen);
     }
@@ -519,25 +512,94 @@ public final class OptChainSourceTransformer {
             break;
         }
 
-        // Also consume leading annotations of form @Name or @Name(...) that sit above the method
-        // Re-scan forward from a safer start: find line start of the first modifier/annotation of the method.
-        // Simpler: from nameStart walk back to previous ';' or '}' or '{' (end of previous member), then skip ws/comments forward.
-        int boundary = nameStart - 1;
-        int depthAngle = 0;
-        while (boundary >= 0) {
-            char ch = src.charAt(boundary);
-            if (ch == ';' || ch == '{' || ch == '}') {
-                break;
+        // First code token after the previous member. Braces inside comments or
+        // literals (javadoc {@code ...}, strings) are not member boundaries.
+        int boundary = lastCodeDelimiterBefore(src, nameStart);
+        return skipWhitespaceAndComments(src, boundary + 1, nameStart);
+    }
+
+    /** Index of the last {@code ;}, <code>{</code>, or <code>}</code> in code before {@code limit}, or {@code -1}. */
+    private static int lastCodeDelimiterBefore(String src, int limit) {
+        ScanState state = ScanState.CODE;
+        int boundary = -1;
+        int end = Math.min(limit, src.length());
+        for (int i = 0; i < end; i++) {
+            char c = src.charAt(i);
+            char next = i + 1 < src.length() ? src.charAt(i + 1) : '\0';
+            if (state == ScanState.CODE) {
+                if (c == '/' && next == '/') {
+                    state = ScanState.LINE_COMMENT;
+                    i++;
+                } else if (c == '/' && next == '*') {
+                    state = ScanState.BLOCK_COMMENT;
+                    i++;
+                } else if (c == '"') {
+                    state = ScanState.STRING;
+                } else if (c == '\'') {
+                    state = ScanState.CHAR;
+                } else if (c == ';' || c == '{' || c == '}') {
+                    boundary = i;
+                }
+            } else if (state == ScanState.LINE_COMMENT) {
+                if (c == '\n') {
+                    state = ScanState.CODE;
+                }
+            } else if (state == ScanState.BLOCK_COMMENT) {
+                if (c == '*' && next == '/') {
+                    state = ScanState.CODE;
+                    i++;
+                }
+            } else if (state == ScanState.STRING) {
+                if (c == '\\' && next != '\0') {
+                    i++;
+                } else if (c == '"') {
+                    state = ScanState.CODE;
+                }
+            } else if (state == ScanState.CHAR) {
+                if (c == '\\' && next != '\0') {
+                    i++;
+                } else if (c == '\'') {
+                    state = ScanState.CODE;
+                }
             }
-            // don't cross class-level blindly through strings — good enough for demo
-            boundary--;
         }
-        int start = boundary + 1;
-        while (start < nameStart && Character.isWhitespace(src.charAt(start))) {
-            start++;
+        return boundary;
+    }
+
+    /** First code token in {@code [from, limit)}, skipping whitespace and comments. */
+    private static int skipWhitespaceAndComments(String src, int from, int limit) {
+        ScanState state = ScanState.CODE;
+        int end = Math.min(limit, src.length());
+        for (int i = Math.max(0, from); i < end; i++) {
+            char c = src.charAt(i);
+            char next = i + 1 < src.length() ? src.charAt(i + 1) : '\0';
+            if (state == ScanState.CODE) {
+                if (Character.isWhitespace(c)) {
+                    continue;
+                }
+                if (c == '/' && next == '/') {
+                    state = ScanState.LINE_COMMENT;
+                    i++;
+                    continue;
+                }
+                if (c == '/' && next == '*') {
+                    state = ScanState.BLOCK_COMMENT;
+                    i++;
+                    continue;
+                }
+                return i;
+            } else if (state == ScanState.LINE_COMMENT) {
+                if (c == '\n') {
+                    state = ScanState.CODE;
+                }
+            } else if (state == ScanState.BLOCK_COMMENT) {
+                if (c == '*' && next == '/') {
+                    state = ScanState.CODE;
+                    i++;
+                }
+            }
         }
-        // Include annotations: if we see @ before modifiers, start is already at @
-        return start;
+        return Math.max(0, from);
     }
 
     private static int skipTypeBackward(String src, int i) {

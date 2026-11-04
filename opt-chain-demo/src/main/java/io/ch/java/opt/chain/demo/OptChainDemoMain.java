@@ -3,7 +3,8 @@ package io.ch.java.opt.chain.demo;
 /**
  * Runnable demo for optional-chain weaving.
  * <p>
- * Prints four scenarios: full chain, null address, null city, null user.
+ * Prints the four city/name scenarios (full chain, null address, null city, null user)
+ * and primitive short-circuit defaults ({@code boolean} / {@code long} / {@code double}).
  * </p>
  */
 public final class OptChainDemoMain {
@@ -28,7 +29,24 @@ public final class OptChainDemoMain {
 
         printCase("4) User is null", null, examples);
 
+        System.out.println("=== Primitive defaults (false / 0L / 0.0, City reference) ===");
+        System.out.println();
+        printPrimitives("5) User is null", null, examples);
+        printPrimitives("6) City is null, address is primary", new User(new Address(null, true)), examples);
+        City measured = new City("Shanghai", 21L, 31.5);
+        printPrimitives("7) Full chain", new User(new Address(measured, true)), examples);
+
         System.out.println("Done. No NullPointerException should occur above.");
+    }
+
+    private static void printPrimitives(String title, User user, OptChainExamples examples) {
+        System.out.println(title);
+        System.out.println("   primaryAddress => " + examples.primaryAddress(user));
+        System.out.println("   cityId         => " + examples.cityId(user));
+        System.out.println("   cityLatitude   => " + examples.cityLatitude(user));
+        City city = examples.city(user);
+        System.out.println("   city           => " + (city == null ? "null" : city.getName()));
+        System.out.println();
     }
 
     private static void printCase(String title, User user, OptChainExamples examples) {
