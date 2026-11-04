@@ -3,8 +3,9 @@ package io.ch.java.opt.chain.demo;
 /**
  * Runnable demo for optional-chain weaving.
  * <p>
- * Prints the four city/name scenarios (full chain, null address, null city, null user)
- * and primitive short-circuit defaults ({@code boolean} / {@code long} / {@code double}).
+ * Prints the four city/name scenarios (full chain, null address, null city, null user),
+ * primitive short-circuit defaults ({@code boolean} / {@code long} / {@code double}),
+ * and the same cases on public fields ({@code u?.address?.city?.name}).
  * </p>
  */
 public final class OptChainDemoMain {
@@ -36,7 +37,31 @@ public final class OptChainDemoMain {
         City measured = new City("Shanghai", 21L, 31.5);
         printPrimitives("7) Full chain", new User(new Address(measured, true)), examples);
 
+        System.out.println("=== Field chains (u?.address?.city?.name) ===");
+        System.out.println();
+        FieldUser fieldFull = new FieldUser(new FieldAddress(new FieldCity("Shanghai", 21L, 31.5), true));
+        printFieldCase("8) Full field chain", fieldFull, examples);
+        printFieldCase("9) Address field is null", new FieldUser(null), examples);
+        printFieldCase(
+                "10) City field is null, address is primary",
+                new FieldUser(new FieldAddress(null, true)),
+                examples);
+        printFieldCase("11) User is null", null, examples);
+
         System.out.println("Done. No NullPointerException should occur above.");
+    }
+
+    private static void printFieldCase(String title, FieldUser user, OptChainExamples examples) {
+        System.out.println(title);
+        String city = examples.fieldCityName(user);
+        System.out.println("   fieldCityName     => " + (city == null ? "null" : city));
+        System.out.println("   fieldNameLength   => " + examples.fieldNameLength(user));
+        System.out.println("   fieldPrimary      => " + examples.fieldPrimary(user));
+        System.out.println("   fieldCityId       => " + examples.fieldCityId(user));
+        System.out.println("   fieldCityLatitude => " + examples.fieldCityLatitude(user));
+        FieldCity fieldCity = examples.fieldCity(user);
+        System.out.println("   fieldCity         => " + (fieldCity == null ? "null" : fieldCity.name));
+        System.out.println();
     }
 
     private static void printPrimitives(String title, User user, OptChainExamples examples) {

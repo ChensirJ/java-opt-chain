@@ -69,4 +69,54 @@ class OptChainTextSupportTest {
     int q = src.indexOf('?');
     assertTrue(OptChainTextSupport.questionLooksLikeOptChain(src, q, q + 1));
   }
+
+  @Test
+  void fieldChainRewritePrefixAndFieldShape() {
+    String src = "return u?.address?.city?.name;";
+    assertEquals("return u.address.city.name;", OptChainTextSupport.rewriteOptChainToDot(src));
+
+    int name = src.indexOf("name");
+    int caret = name + "name".length();
+    assertEquals(src.lastIndexOf("?."), OptChainTextSupport.findOptChainOperatorBeforeMember(src, caret));
+    assertEquals("name", OptChainTextSupport.memberPrefixAfterOptChain(src, caret));
+    assertTrue(OptChainTextSupport.memberAfterOptChainLooksLikeField(src, caret));
+    assertTrue(OptChainTextSupport.memberAfterOptChainLooksLikeField(src, name + 2));
+
+    int address = src.indexOf("address") + "address".length();
+    assertEquals("address", OptChainTextSupport.memberPrefixAfterOptChain(src, address));
+    assertTrue(OptChainTextSupport.memberAfterOptChainLooksLikeField(src, address));
+
+    int q = src.lastIndexOf("?.");
+    assertEquals(q, OptChainTextSupport.optChainOperatorStart(src, q));
+    assertEquals(q, OptChainTextSupport.optChainOperatorStart(src, q + 1));
+    assertTrue(OptChainTextSupport.memberAfterOptChainLooksLikeField(src, q));
+  }
+
+  @Test
+  void callAfterOptChainIsNotAField() {
+    String src = "return u?.getName();";
+    int caret = src.indexOf("getName") + 3;
+    assertFalse(OptChainTextSupport.memberAfterOptChainLooksLikeField(src, caret));
+    assertEquals("get", OptChainTextSupport.memberPrefixAfterOptChain(src, caret));
+  }
+
+  @Test
+  void fieldChainSameLineStillLooksLikeOptChainError() {
+    String src = "return u?.address?.city?.name;";
+    int name = src.indexOf("name");
+    assertTrue(
+        OptChainTextSupport.looksLikeOptChainSyntaxError(
+            src, name, name + "name".length(), "Cannot resolve symbol 'name'"));
+  }
+
+  @Test
+  void operatorStartOnEitherCharacter() {
+    String src = "u?.name";
+    int q = src.indexOf('?');
+    assertEquals(q, OptChainTextSupport.optChainOperatorStart(src, q));
+    assertEquals(q, OptChainTextSupport.optChainOperatorStart(src, q + 1));
+    assertTrue(OptChainTextSupport.isAtOptChainOperator(src, q));
+    assertTrue(OptChainTextSupport.isAtOptChainOperator(src, q + 1));
+    assertEquals(-1, OptChainTextSupport.optChainOperatorStart(src, 0));
+  }
 }

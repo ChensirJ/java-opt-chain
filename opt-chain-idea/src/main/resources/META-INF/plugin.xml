@@ -8,13 +8,14 @@
     <ul>
       <li>Suppresses illegal-token / red-line errors on <code>?.</code> (HighlightErrorFilter + HighlightInfoFilter)</li>
       <li>Highlights <code>?.</code> operators</li>
-      <li>Member completion after <code>receiver?.</code></li>
-      <li>Go to Declaration on members accessed via <code>?.</code></li>
+      <li>Field and method completion after <code>receiver?.</code> (same <code>?.</code> → <code>.</code> rewrite)</li>
+      <li>Go to Declaration on fields and methods accessed via <code>?.</code></li>
     </ul>
     <p>Compilation still requires the Maven <code>opt-chain</code> plugin; this IDE plugin only improves the editor experience.</p>
     <p>Compatible with IntelliJ IDEA 2024.1+ through 2025.2 (build 241–252+).</p>
   ]]></description>
   <change-notes><![CDATA[
+    <p>0.1.2 — Field chains share completion and navigation with methods. Go to Declaration falls back to a field of the qualifier type when resolve() is empty. Highlight filters unchanged.</p>
     <p>0.1.1 — Stronger red-squiggle suppression (HighlightInfoFilter + wider ?. matching); explicit 2025.2 / build 252 support.</p>
     <p>0.1.0 — Initial release: error filter, highlight, completion, navigation.</p>
   ]]></change-notes>

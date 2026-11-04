@@ -37,6 +37,39 @@ class OptChainSourceTransformerTest {
     }
 
     @Test
+    void rewritesFieldChainsLikeMethodChains() {
+        String src = """
+                package demo;
+
+                public class Sample {
+                    // keep u?.address in a comment
+                    public String cityName(User u) {
+                        return u?.address?.city?.name;
+                    }
+
+                    public int nameLength(User u) {
+                        return u?.address?.city?.name?.length();
+                    }
+                }
+                """;
+
+        OptChainSourceTransformer.Result result = OptChainSourceTransformer.transform(src);
+        String out = result.source();
+
+        assertTrue(result.changed());
+        assertEquals(7, result.replacements());
+        assertFalse(out.contains("return u?."));
+        assertTrue(out.contains("// keep u?.address in a comment"));
+        assertTrue(out.contains("return u.address.city.name;"));
+        assertTrue(out.contains("return u.address.city.name.length();"));
+        assertEquals(2, countAnnotations(out));
+        assertEquals(1, countExact(out, IMPORT_LINE));
+        assertTrue(out.indexOf("@OptChain") < out.indexOf("public String cityName"));
+        assertTrue(out.indexOf("public String cityName") < out.lastIndexOf("@OptChain"));
+        assertTrue(out.lastIndexOf("@OptChain") < out.indexOf("public int nameLength"));
+    }
+
+    @Test
     void commentsAndStringsAreNotRewritten() {
         String src = """
                 package demo;

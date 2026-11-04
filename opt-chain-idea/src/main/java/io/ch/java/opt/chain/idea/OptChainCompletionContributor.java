@@ -20,7 +20,11 @@ import com.intellij.util.ProcessingContext;
 import org.jetbrains.annotations.NotNull;
 
 /**
- * Offers member completion after {@code receiver?.} by rewriting to {@code .} and reading the type.
+ * Offers field and method completion after {@code receiver?.}.
+ *
+ * <p>Both use the same {@code ?.} → {@code .} reparse and the qualifier type. Public field chains
+ * such as {@code u?.address?.city} are ordinary fields on that type. Highlight filters are separate
+ * and are not changed here.
  */
 public class OptChainCompletionContributor extends CompletionContributor {
 
@@ -77,6 +81,11 @@ public class OptChainCompletionContributor extends CompletionContributor {
                 prefix.isEmpty() ? result : result.withPrefixMatcher(prefix);
 
             for (PsiField field : psiClass.getAllFields()) {
+              String fieldName = field.getName();
+              // Inner-class this$0 is not a useful ?. target; real fields (including public ones) stay.
+              if (fieldName.startsWith("this$")) {
+                continue;
+              }
               if (field.hasModifierProperty(PsiModifier.PRIVATE)
                   && field.getContainingClass() != null
                   && !field.getContainingClass().equals(psiClass)) {
