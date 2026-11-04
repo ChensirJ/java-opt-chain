@@ -5,7 +5,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Source-level preprocessor: replaces {@code ?.} with {@code .} outside comments/strings,
+ * Source-level preprocessor: replaces {@code ?.} with {@code .} outside comments/strings
+ * (method calls and field reads such as {@code u?.address?.city?.name}),
  * and ensures methods that used {@code ?.} carry {@code @OptChain} plus the import.
  */
 public final class OptChainSourceTransformer {

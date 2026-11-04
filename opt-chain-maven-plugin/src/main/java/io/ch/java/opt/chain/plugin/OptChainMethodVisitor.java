@@ -10,7 +10,8 @@ import org.objectweb.asm.commons.GeneratorAdapter;
  * Conservative / practical optional-chain rewriter.
  * <p>
  * For each {@code GETFIELD}, {@code INVOKEVIRTUAL}, and {@code INVOKEINTERFACE}
- * inside an {@code @OptChain} method:
+ * inside an {@code @OptChain} method. Field chains ({@code a?.b?.c}) become
+ * {@code GETFIELD} after preprocess and take the same null check:
  * <ol>
  *   <li>Spill any call arguments to fresh locals (invokes only).</li>
  *   <li>{@code dup} the receiver and branch on null.</li>

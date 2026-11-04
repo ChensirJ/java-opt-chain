@@ -48,15 +48,19 @@ Methods annotated with `@OptChain` are candidates for ASM weaving. You usually d
 
 - Goal: `opt-chain:preprocess`
 - Phases: `generate-sources` (main), `generate-test-sources` (tests, with `processTestSources=true`)
-- Behavior: text-level rewrite of `?.` to `.` outside comments/strings; ensure `@OptChain` on affected methods; swap compile roots to the generated tree
+- Behavior: text-level rewrite of `?.` to `.` outside comments/strings, for both calls (`obj?.method()`) and fields (`obj?.field`); ensure `@OptChain` on affected methods; swap compile roots to the generated tree
 - Skip: `-Doptchain.preprocess.skip=true`
 - A source root with no `?.` is left unchanged (debug log). A read, write, or transform failure names the file path relative to that root.
 
-Example authoring style (demo):
+Example authoring style (demo). Getter chains and field chains are the same rewrite:
 
 ```java
 public String cityOf(User u) {
     return u?.getAddress()?.getCity()?.getName();
+}
+
+public String fieldCityName(FieldUser u) {
+    return u?.address?.city?.name;
 }
 ```
 
@@ -64,7 +68,7 @@ public String cityOf(User u) {
 
 - Goal: `opt-chain:weave`
 - Phase: `process-classes`
-- Behavior: for `@OptChain` methods, insert null checks before instance field gets and instance method invokes; short-circuit with typed defaults
+- Behavior: for `@OptChain` methods, insert null checks before instance field gets (`GETFIELD`, including `a?.field` after preprocess) and instance method invokes; short-circuit with typed defaults
 - Skip: `-Doptchain.skip=true`
 - Classes with no `@OptChain` method are left unchanged (debug log). The info log reports how many class files were scanned and how many were rewritten. An ASM or I/O failure names the class path relative to the output directory.
 
@@ -84,7 +88,7 @@ Defaults are fixed (not configurable). A null receiver skips that access or call
 | reference or array | `null` |
 | `void` | no value; the call is skipped |
 
-`opt-chain-demo` exercises `int`, `boolean`, `long`, `double`, and reference results with `?.` on `User` → `Address` → `City` (`OptChainExamples`):
+`opt-chain-demo` exercises `int`, `boolean`, `long`, `double`, and reference results with `?.` on `User` → `Address` → `City` (`OptChainExamples`), and the same shapes on public fields (`FieldUser` → `FieldAddress` → `FieldCity`):
 
 | Method | When the chain is present | When a link is null |
 |--------|---------------------------|---------------------|
@@ -96,6 +100,19 @@ Defaults are fixed (not configurable). A null receiver skips that access or call
 | `cityOf` | the city name | `null` |
 
 Root null (`user == null`) and mid-chain null (`address` or `city` null) both short-circuit from the missing link. A prefix that is still non-null keeps its real value: `primaryAddress` is the address flag even when `city` is null. `city` is non-null when `user`, `address`, and `city` are all present. A null city name short-circuits `nameLength` to `0` while `city` itself stays non-null.
+
+Field reads use that same preprocess rule and the same `GETFIELD` null-check. Parallel methods on the public-field model:
+
+| Method | Chain | When a link is null |
+|--------|-------|---------------------|
+| `fieldCityName` | `u?.address?.city?.name` | `null` |
+| `fieldNameLength` | `…?.name?.length()` | `int` `0` |
+| `fieldPrimary` | `u?.address?.primary` | `boolean` `false` |
+| `fieldCityId` | `…?.city?.id` | `long` `0L` |
+| `fieldCityLatitude` | `…?.city?.latitude` | `double` `0.0` |
+| `fieldCity` | `u?.address?.city` | `null` |
+
+A null `address` or `city` field short-circuits from that link. `fieldPrimary` stays the real flag when `city` is null. A null `name` short-circuits `fieldNameLength` to `0` while `fieldCity` stays non-null.
 
 `byte`, `char`, `short`, and `float` use the same weaver table. The demo model does not call them.
 
@@ -137,11 +154,11 @@ Root null (`user == null`) and mid-chain null (`address` or `city` null) both sh
 
 ## Build, test, and run the demo
 
-From the repo root:
+From the repo root. GitHub Actions (`.github/workflows/ci.yml`) runs the same `mvn -B clean test` on Java 17 for pushes to `main` and for pull requests.
 
 ```bash
 # Full reactor tests (annotations, plugin, demo)
-mvn clean test
+mvn -B clean test
 
 # Windows example checkout
 mvn -f D:\java-opt-chain\pom.xml clean test
@@ -150,9 +167,9 @@ mvn -f D:\java-opt-chain\pom.xml clean test
 mvn -pl opt-chain-demo -am test
 ```
 
-`mvn test` runs `opt-chain-demo` (woven `?.` behavior) and `opt-chain-maven-plugin` unit tests of `OptChainSourceTransformer` (comments/strings, rewrite, `@OptChain` and import injection; no Maven lifecycle). The IDEA plugin is a separate Gradle build.
+`mvn test` runs `opt-chain-demo` (woven `?.` behavior for getters and public fields) and `opt-chain-maven-plugin` unit tests of `OptChainSourceTransformer` (comments/strings, field and call rewrite, `@OptChain` and import injection; no Maven lifecycle). The IDEA plugin is a separate Gradle build.
 
-Runnable main (`OptChainDemoMain`) prints four city/name cases (full chain, null address, null city, null user) and the primitive short-circuit defaults:
+Runnable main (`OptChainDemoMain`) prints four city/name cases (full chain, null address, null city, null user), the primitive short-circuit defaults, and the matching public-field chains:
 
 ```bash
 # Build/install the reactor first (needed once / after clean), then run main on the demo module only.
@@ -196,7 +213,7 @@ Lightweight unit tests (no IDE UI):
 ./gradlew test
 ```
 
-Prebuilt zips may also sit at the repo root (e.g. `opt-chain-idea-0.1.1-SNAPSHOT.zip`).
+Prebuilt zips may also sit at the repo root (e.g. `opt-chain-idea-0.1.1-SNAPSHOT.zip`). Plugin sources are **0.1.2-SNAPSHOT** (field completion / navigation notes below).
 
 ### Install
 
@@ -211,20 +228,21 @@ Prebuilt zips may also sit at the repo root (e.g. `opt-chain-idea-0.1.1-SNAPSHOT
 |---------|-----------|
 | Fewer red squiggles on `?.` | `HighlightErrorFilter` / highlight filters for related `PsiErrorElement`s |
 | Highlighting | `Annotator` + color settings page |
-| Completion | Treat `?.` as `.` temporarily, resolve left-hand type, contribute members |
-| Go to declaration | Same rewrite-then-`resolve` approach |
+| Completion | Treat `?.` as `.` temporarily, resolve left-hand type, contribute fields and methods (one heuristic) |
+| Go to declaration | Same rewrite-then-`resolve`. If `resolve()` is empty, fall back to a field (plain `obj?.field`) or method (call) of the qualifier type by name |
 
 ### Plugin limitations
 
 - Not a real Java grammar extension; PSI may still be incomplete
-- Completion / navigation are heuristics; Maven compile is authoritative
+- Completion / navigation are heuristics shared by fields and methods (`?.` is not a separate field grammar); Maven compile is authoritative
+- **0.1.2** documents that sharing and adds the qualifier-type fallback for go-to-declaration. Highlight error filters are unchanged from 0.1.1
 - Requires the Java plugin (`com.intellij.modules.java`)
 - Eclipse / VS Code are out of scope
 
 ## Known limitations (compiler pipeline)
 
 - Without the IDEA plugin, the editor still flags `?.` as illegal syntax. Maven preprocess is what `javac` compiles.
-- Preprocess is a text scan, not a Java parser. `?.` outside line comments, block comments, and string/char literals is rewritten; those spots are covered by `OptChainSourceTransformerTest`. There is no separate text-block mode, so a `"` inside a `"""` block can desync the scan.
+- Preprocess is a text scan, not a Java parser. `?.` outside line comments, block comments, and string/char literals is rewritten, whether the next token is a field (`u?.address?.city?.name`) or a call; those spots are covered by `OptChainSourceTransformerTest`. There is no separate text-block mode, so a `"` inside a `"""` block can desync the scan.
 - Method detection and `@OptChain` insertion are heuristic. Javadoc such as `{@code @OptChain}` is not treated as the annotation. Unusual syntax may still need a handwritten `@OptChain`.
 - Weaving null-checks every instance field read and instance invoke in an `@OptChain` method, not only the `?.` chain.
 - No rewrite of `INVOKESTATIC`, `INVOKESPECIAL` (constructors, `super`, private calls), or `INVOKEDYNAMIC`.

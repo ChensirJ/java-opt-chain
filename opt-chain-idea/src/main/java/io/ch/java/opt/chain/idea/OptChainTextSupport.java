@@ -41,12 +41,27 @@ public final class OptChainTextSupport {
 
   /** True if offset is on a {@code ?.} operator. */
   public static boolean isAtOptChainOperator(@NotNull CharSequence text, int offset) {
-    if (offset >= 0 && offset + 1 < text.length()
-        && text.charAt(offset) == '?' && text.charAt(offset + 1) == '.') {
-      return true;
+    return optChainOperatorStart(text, offset) >= 0;
+  }
+
+  /**
+   * Index of {@code ?} when {@code offset} sits on either character of {@code ?.}, else {@code -1}.
+   * Field chains and method chains use the same operator.
+   */
+  public static int optChainOperatorStart(@NotNull CharSequence text, int offset) {
+    if (offset >= 0
+        && offset + 1 < text.length()
+        && text.charAt(offset) == '?'
+        && text.charAt(offset + 1) == '.') {
+      return offset;
     }
-    return offset > 0 && offset < text.length()
-        && text.charAt(offset - 1) == '?' && text.charAt(offset) == '.';
+    if (offset > 0
+        && offset < text.length()
+        && text.charAt(offset - 1) == '?'
+        && text.charAt(offset) == '.') {
+      return offset - 1;
+    }
+    return -1;
   }
 
   /**
@@ -65,6 +80,33 @@ public final class OptChainTextSupport {
       return -1;
     }
     return i - 1;
+  }
+
+  /**
+   * True when the member after {@code ?.} is not a call ({@code (} does not follow the identifier).
+   *
+   * <p>Field chains ({@code u?.address?.city?.name}) and method chains share
+   * {@link #findOptChainOperatorBeforeMember}. This only classifies the tail.
+   * During completion, before {@code (} is typed, a method name also looks like a field;
+   * go-to-declaration on {@code getName()} does not.
+   */
+  public static boolean memberAfterOptChainLooksLikeField(
+      @NotNull CharSequence text, int caretOffset) {
+    int op = findOptChainOperatorBeforeMember(text, caretOffset);
+    if (op < 0) {
+      op = optChainOperatorStart(text, caretOffset);
+    }
+    if (op < 0) {
+      return false;
+    }
+    int i = op + 2;
+    while (i < text.length() && isJavaIdentifierPart(text.charAt(i))) {
+      i++;
+    }
+    while (i < text.length() && Character.isWhitespace(text.charAt(i))) {
+      i++;
+    }
+    return i >= text.length() || text.charAt(i) != '(';
   }
 
   /** Extract member name prefix being typed after {@code ?.} (may be empty). */

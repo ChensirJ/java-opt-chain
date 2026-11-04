@@ -39,7 +39,7 @@ public class OptChainAnnotator implements Annotator {
       holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
           .range(range)
           .textAttributes(OptChainColors.OPT_CHAIN_OPERATOR)
-          .tooltip("Optional chain (?.): null-safe member access — compiled via opt-chain Maven plugin")
+          .tooltip("Optional chain (?.): null-safe field or method access — compiled via opt-chain Maven plugin")
           .create();
     }
   }

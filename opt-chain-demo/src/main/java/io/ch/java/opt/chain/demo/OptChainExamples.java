@@ -5,6 +5,8 @@ package io.ch.java.opt.chain.demo;
  * <p>
  * {@code opt-chain:preprocess} rewrites {@code ?.} to {@code .} and ensures
  * {@code @OptChain}; {@code opt-chain:weave} then null-safes the bytecode.
+ * Getter chains ({@code getAddress()}) and public-field chains ({@code address})
+ * share that rewrite. Field reads become {@code GETFIELD}, which weave already null-checks.
  * </p>
  */
 public class OptChainExamples {
@@ -38,5 +40,35 @@ public class OptChainExamples {
      */
     public City city(User u) {
         return u?.getAddress()?.getCity();
+    }
+
+    /** Public-field twin of {@link #cityOf(User)}: {@code u?.address?.city?.name}. */
+    public String fieldCityName(FieldUser u) {
+        return u?.address?.city?.name;
+    }
+
+    /** Field chain plus {@code length()}; a null {@code name} yields {@code 0}. */
+    public int fieldNameLength(FieldUser u) {
+        return u?.address?.city?.name?.length();
+    }
+
+    /** {@code boolean} field. A null {@code address} yields {@code false}. */
+    public boolean fieldPrimary(FieldUser u) {
+        return u?.address?.primary;
+    }
+
+    /** {@code long} field. A null {@code city} yields {@code 0L}. */
+    public long fieldCityId(FieldUser u) {
+        return u?.address?.city?.id;
+    }
+
+    /** {@code double} field. A null {@code city} yields {@code 0.0}. */
+    public double fieldCityLatitude(FieldUser u) {
+        return u?.address?.city?.latitude;
+    }
+
+    /** Reference field. Null {@code address} or {@code city} yields {@code null}. */
+    public FieldCity fieldCity(FieldUser u) {
+        return u?.address?.city;
     }
 }
