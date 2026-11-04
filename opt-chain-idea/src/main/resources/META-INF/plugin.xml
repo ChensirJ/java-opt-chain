@@ -1,0 +1,34 @@
+<idea-plugin>
+  <id>io.ch.java.opt.chain.idea</id>
+  <name>Opt Chain</name>
+  <vendor>example</vendor>
+  <description><![CDATA[
+    <p>Supports JavaScript-style optional chaining <code>?.</code> in Java sources for the
+    <b>java-opt-chain</b> Maven toolchain (preprocess + ASM weave).</p>
+    <ul>
+      <li>Suppresses illegal-token / red-line errors on <code>?.</code> (HighlightErrorFilter + HighlightInfoFilter)</li>
+      <li>Highlights <code>?.</code> operators</li>
+      <li>Member completion after <code>receiver?.</code></li>
+      <li>Go to Declaration on members accessed via <code>?.</code></li>
+    </ul>
+    <p>Compilation still requires the Maven <code>opt-chain</code> plugin; this IDE plugin only improves the editor experience.</p>
+    <p>Compatible with IntelliJ IDEA 2024.1+ through 2025.2 (build 241–252+).</p>
+  ]]></description>
+  <change-notes><![CDATA[
+    <p>0.1.1 — Stronger red-squiggle suppression (HighlightInfoFilter + wider ?. matching); explicit 2025.2 / build 252 support.</p>
+    <p>0.1.0 — Initial release: error filter, highlight, completion, navigation.</p>
+  ]]></change-notes>
+
+  <depends>com.intellij.modules.platform</depends>
+  <depends>com.intellij.modules.java</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <highlightErrorFilter implementation="io.ch.java.opt.chain.idea.OptChainHighlightErrorFilter"/>
+    <daemon.highlightInfoFilter implementation="io.ch.java.opt.chain.idea.OptChainHighlightInfoFilter"/>
+    <annotator language="JAVA" implementationClass="io.ch.java.opt.chain.idea.OptChainAnnotator"/>
+    <completion.contributor language="JAVA"
+                            implementationClass="io.ch.java.opt.chain.idea.OptChainCompletionContributor"/>
+    <gotoDeclarationHandler implementation="io.ch.java.opt.chain.idea.OptChainGotoDeclarationHandler"/>
+    <colorSettingsPage implementation="io.ch.java.opt.chain.idea.OptChainColorSettingsPage"/>
+  </extensions>
+</idea-plugin>

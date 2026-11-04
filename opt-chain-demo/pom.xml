@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.ch.java.opt.chain</groupId>
+    <artifactId>java-opt-chain</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+  </parent>
+  <artifactId>opt-chain-demo</artifactId>
+  <name>opt-chain-demo</name>
+  <description>Demo entities and tests for ?. preprocess + @OptChain weaving</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.ch.java.opt.chain</groupId>
+      <artifactId>opt-chain-annotations</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.ch.java.opt.chain</groupId>
+        <artifactId>opt-chain-maven-plugin</artifactId>
+        <version>${project.version}</version>
+        <executions>
+          <execution>
+            <id>preprocess-main</id>
+            <goals>
+              <goal>preprocess</goal>
+            </goals>
+            <phase>generate-sources</phase>
+          </execution>
+          <execution>
+            <id>preprocess-test</id>
+            <goals>
+              <goal>preprocess</goal>
+            </goals>
+            <phase>generate-test-sources</phase>
+            <configuration>
+              <processTestSources>true</processTestSources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>weave-opt-chain</id>
+            <goals>
+              <goal>weave</goal>
+            </goals>
+            <phase>process-classes</phase>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <mainClass>io.ch.java.opt.chain.demo.OptChainDemoMain</mainClass>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
