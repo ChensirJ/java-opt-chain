@@ -14,18 +14,21 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
 /**
  * Preprocesses Java sources that contain {@code ?.} into legal Java under
- * {@code target/generated-sources/opt-chain} (and generated-test-sources).
+ * {@code target/opt-chain/sources} (and {@code target/opt-chain/test-sources}).
  * <p>
  * When any file in a source root contains {@code ?.}, the whole root is mirrored
- * into the generated directory (with {@code ?.} rewritten) and that generated
- * directory <em>replaces</em> the original compile source root. This avoids
- * javac seeing illegal {@code ?.} and avoids exclude patterns that would also
- * drop the generated twin.
+ * (with {@code ?.} rewritten) and that directory <em>replaces</em> the original
+ * compile source root for this Maven build. {@code javac} never sees illegal
+ * {@code ?.}. The mirror is intentionally <em>not</em> under
+ * {@code target/generated-sources}: IntelliJ marks that tree as a source root
+ * and also keeps {@code src/main/java}, which reports every class twice.
+ * Authoring sources stay the only IDE source root. CLI builds still compile the mirror.
  * </p>
  */
 @Mojo(name = "preprocess", defaultPhase = LifecyclePhase.GENERATE_SOURCES, threadSafe = true)
@@ -34,10 +37,10 @@ public class OptChainPreprocessMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
 
-    @Parameter(defaultValue = "${project.build.directory}/generated-sources/opt-chain")
+    @Parameter(defaultValue = "${project.build.directory}/" + OptChainLayout.MAIN_DIR)
     private File outputDirectory;
 
-    @Parameter(defaultValue = "${project.build.directory}/generated-test-sources/opt-chain")
+    @Parameter(defaultValue = "${project.build.directory}/" + OptChainLayout.TEST_DIR)
     private File testOutputDirectory;
 
     /** When true, also scan test sources (bind a second execution to generate-test-sources). */
@@ -98,6 +101,7 @@ public class OptChainPreprocessMojo extends AbstractMojo {
         }
 
         if (!anyTransformed) {
+            deleteLegacyMirror(outDir.toPath());
             getLog().info("opt-chain:preprocess — no ?. sources in " + (test ? "test" : "main"));
             return;
         }
@@ -118,9 +122,46 @@ public class OptChainPreprocessMojo extends AbstractMojo {
             }
         }
 
+        deleteLegacyMirror(outDir.toPath());
+
         getLog().info("opt-chain:preprocess mirrored roots with ?. → " + outDir
                 + " (" + transformedFiles + " file(s) rewritten, "
-                + replacements + " ?. → .)");
+                + replacements + " ?. wrapped in OptChainOps.opt). "
+                + "Not under target/generated-sources, so IntelliJ keeps src as the only source root.");
+    }
+
+    /**
+     * Removes a previous {@code target/generated-sources/opt-chain} tree when this run
+     * writes somewhere else. IDEA's generated-sources scan would otherwise keep the old
+     * mirror as a second source root.
+     */
+    private void deleteLegacyMirror(Path currentOut) throws MojoExecutionException {
+        Path buildDir = Path.of(project.getBuild().getDirectory());
+        Path legacy = buildDir.resolve(processTestSources
+                ? OptChainLayout.LEGACY_TEST_DIR
+                : OptChainLayout.LEGACY_MAIN_DIR);
+        if (legacy.toAbsolutePath().normalize().equals(currentOut.toAbsolutePath().normalize())) {
+            return;
+        }
+        if (!Files.exists(legacy)) {
+            return;
+        }
+        try {
+            deleteTree(legacy);
+        } catch (IOException e) {
+            throw new MojoExecutionException(
+                    "opt-chain preprocess could not remove legacy mirror " + legacy, e);
+        }
+        getLog().info("opt-chain:preprocess removed legacy mirror " + legacy);
+    }
+
+    private static void deleteTree(Path root) throws IOException {
+        try (Stream<Path> walk = Files.walk(root)) {
+            List<Path> paths = walk.sorted(Comparator.reverseOrder()).toList();
+            for (Path path : paths) {
+                Files.deleteIfExists(path);
+            }
+        }
     }
 
     private boolean rootContainsOptChain(Path root) throws MojoExecutionException {
@@ -173,7 +214,7 @@ public class OptChainPreprocessMojo extends AbstractMojo {
                         transformed++;
                         replacements += result.replacements();
                         getLog().info("opt-chain:preprocess " + rel
-                                + " (" + result.replacements() + " ?. → .)");
+                                + " (" + result.replacements() + " ?. wrapped in OptChainOps.opt)");
                     } else {
                         Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
                     }

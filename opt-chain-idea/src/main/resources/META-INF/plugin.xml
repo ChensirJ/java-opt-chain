@@ -4,17 +4,22 @@
   <vendor>example</vendor>
   <description><![CDATA[
     <p>Supports JavaScript-style optional chaining <code>?.</code> in Java sources for the
-    <b>java-opt-chain</b> Maven toolchain (preprocess + ASM weave).</p>
+    <b>java-opt-chain</b> toolchain.</p>
     <ul>
-      <li>Suppresses illegal-token / red-line errors on <code>?.</code> (HighlightErrorFilter + HighlightInfoFilter)</li>
-      <li>Highlights <code>?.</code> operators</li>
-      <li>Field and method completion after <code>receiver?.</code> (same <code>?.</code> → <code>.</code> rewrite)</li>
-      <li>Go to Declaration on fields and methods accessed via <code>?.</code></li>
+      <li>Suppresses illegal-token / red-line errors on <code>?.</code></li>
+      <li>Highlights <code>?.</code> operators, completes fields and methods, and navigates to them</li>
+      <li>Before IDEA's Java compiler runs, rewrites <code>?.</code> to <code>OptChainOps.opt(receiver)</code>
+          (the same transform as Maven <code>opt-chain:preprocess</code>) and weaves the class files
+          so Run/Debug short-circuits null receivers</li>
+      <li>Keeps <code>target/generated-sources/opt-chain</code> and <code>target/opt-chain</code> from
+          being a second source root (no duplicate class next to <code>src/main/java</code>)</li>
     </ul>
-    <p>Compilation still requires the Maven <code>opt-chain</code> plugin; this IDE plugin only improves the editor experience.</p>
+    <p>Maven preprocess + weave remain the source of truth for command-line builds.
+    After installing, use <b>File → Invalidate Caches… → Invalidate and Restart</b>, then reimport Maven.</p>
     <p>Compatible with IntelliJ IDEA 2024.1+ through 2025.2 (build 241–252+).</p>
   ]]></description>
   <change-notes><![CDATA[
+    <p>0.2.1 — IDEA build rewrites <code>?.</code> to <code>OptChainOps.opt</code> and weaves class files, so Run/Debug works without a prior Maven preprocess. Maven mirrors are not IDE source roots (fixes duplicate class on <code>target/generated-sources/opt-chain</code>).</p>
     <p>0.2.0 — Plugin id and implementation package are now io.github.chensirj.optchain.idea. Uninstall the old plugin (id io.ch.java.opt.chain.idea) before installing this build. Editor behavior is unchanged from 0.1.2.</p>
     <p>0.1.2 — Field chains share completion and navigation with methods. Go to Declaration falls back to a field of the qualifier type when resolve() is empty. Highlight filters unchanged.</p>
     <p>0.1.1 — Stronger red-squiggle suppression (HighlightInfoFilter + wider ?. matching); explicit 2025.2 / build 252 support.</p>
@@ -23,6 +28,7 @@
 
   <depends>com.intellij.modules.platform</depends>
   <depends>com.intellij.modules.java</depends>
+  <depends optional="true" config-file="optchain-maven.xml">org.jetbrains.idea.maven</depends>
 
   <extensions defaultExtensionNs="com.intellij">
     <highlightErrorFilter implementation="io.github.chensirj.optchain.idea.OptChainHighlightErrorFilter"/>
@@ -32,5 +38,7 @@
                             implementationClass="io.github.chensirj.optchain.idea.OptChainCompletionContributor"/>
     <gotoDeclarationHandler implementation="io.github.chensirj.optchain.idea.OptChainGotoDeclarationHandler"/>
     <colorSettingsPage implementation="io.github.chensirj.optchain.idea.OptChainColorSettingsPage"/>
+    <postStartupActivity implementation="io.github.chensirj.optchain.idea.OptChainStartup"/>
+    <buildProcess.parametersProvider implementation="io.github.chensirj.optchain.idea.OptChainBuildProcessParametersProvider"/>
   </extensions>
 </idea-plugin>

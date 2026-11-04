@@ -8,7 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * Suppresses red-line syntax errors that come from writing JS-style {@code ?.} in Java sources.
- * Actual compilation still goes through the Maven preprocess + weave pipeline.
+ * IDEA's own build rewrites {@code ?.} before javac; Maven preprocess remains the CLI path.
  */
 public class OptChainHighlightErrorFilter extends HighlightErrorFilter {
 

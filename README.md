@@ -4,7 +4,7 @@ Compile-time optional chaining for Java, inspired by JavaScript's `?.` operator.
 
 Standard `javac` does not accept `?.`. This project adds a **two-step Maven pipeline** so you can write source that looks like JS optional chaining, then turn it into null-safe bytecode:
 
-1. **`opt-chain:preprocess`** (`generate-sources` / `generate-test-sources`) — If a source root contains `?.`, mirror the tree into `target/generated-sources/opt-chain`, wrap each `?.` receiver in `OptChainOps.opt(...)`, inject `@OptChain(precise = true)` when needed, and **replace** the compile source root so `javac` never sees illegal syntax.
+1. **`opt-chain:preprocess`** (`generate-sources` / `generate-test-sources`) — If a source root contains `?.`, mirror the tree into `target/opt-chain/sources` (tests: `target/opt-chain/test-sources`), wrap each `?.` receiver in `OptChainOps.opt(...)`, inject `@OptChain(precise = true)` when needed, and **replace** the compile source root so `javac` never sees illegal syntax. The mirror is **not** under `target/generated-sources`. IntelliJ marks that directory as a source root and would also keep `src/main/java`, so every class (`FieldUser`, `OptChainExamples`, …) showed up twice. `target/opt-chain` stays an ordinary build output and is not an IDE source root. A previous `target/generated-sources/opt-chain` tree is deleted on the next preprocess.
 2. **`opt-chain:weave`** (`process-classes`) — Use ASM to null-check only those marked receivers (`GETFIELD` / `ARRAYLENGTH` / instance invokes). A plain `.` in the same method still throws `NullPointerException` (reference → `null`, primitives → typed zero / `false`; see [Short-circuit defaults](#short-circuit-defaults)).
 
 Comments and string literals are left alone by the preprocessor.
@@ -26,7 +26,7 @@ If any link is `null`/`undefined`, the expression short-circuits instead of thro
 | `opt-chain-annotations` | `@OptChain` annotation (`RetentionPolicy.CLASS`) |
 | `opt-chain-maven-plugin` | Goals: `preprocess`, `weave` |
 | `opt-chain-demo` | `User → Address → City` sample with `?.`, JUnit 5, and a runnable `main` |
-| `opt-chain-idea` | IntelliJ IDEA plugin (separate Gradle project): suppress red squiggles, highlight, completion, go-to-declaration |
+| `opt-chain-idea` | IntelliJ IDEA plugin (separate Gradle project, 0.2.1-SNAPSHOT): suppress red squiggles, highlight, completion, go-to-declaration, and compile/weave `?.` inside IDEA |
 
 - **groupId:** `io.github.chensirj`
 - **version:** `0.2.0-SNAPSHOT`
@@ -56,7 +56,8 @@ If a method contains `OptChainOps.opt` calls, those markers win and weaving is p
 
 - Goal: `opt-chain:preprocess`
 - Phases: `generate-sources` (main), `generate-test-sources` (tests, with `processTestSources=true`)
-- Behavior: outside comments and string/char literals, `a?.b` becomes `io.github.chensirj.optchain.OptChainOps.opt(a).b` (calls and fields). Methods and constructors whose bodies contain a marker get `@OptChain(precise = true)` and the import. The generated tree replaces the compile root.
+- Output: `target/opt-chain/sources` and `target/opt-chain/test-sources` (not `target/generated-sources/opt-chain`)
+- Behavior: outside comments and string/char literals, `a?.b` becomes `io.github.chensirj.optchain.OptChainOps.opt(a).b` (calls and fields). Methods and constructors whose bodies contain a marker get `@OptChain(precise = true)` and the import. The generated tree replaces the compile root for the Maven build only. IntelliJ keeps editing `src/main/java`.
 - Skip: `-Doptchain.preprocess.skip=true`
 - A source root with no `?.` is left unchanged (debug log). A read, write, or transform failure names the file path relative to that root.
 
@@ -240,9 +241,42 @@ java -cp opt-chain-demo/target/classes:opt-chain-annotations/target/classes \
 
 (On Windows, use `;` instead of `:` in the classpath.)
 
+## Run OptChainDemoMain / OptChainExamples from IDEA
+
+Two separate IDE problems showed up on Windows (IDEA 2024.1+ / 2025.2):
+
+| Symptom | Cause |
+|---------|--------|
+| `java: 非法的表达式开始` on `?.` in `OptChainExamples.java` | IDEA's Java compiler does not run Maven `opt-chain:preprocess`, so `?.` is still illegal Java. |
+| `Duplicate class found` in `target\generated-sources\opt-chain\...\FieldUser.java` | IDEA indexed both `src/main/java` and the preprocess mirror. |
+
+**What landed:** the IDE plugin (0.2.1) rewrites `?.` to `OptChainOps.opt(...)` during the IDEA build — the same transform as Maven preprocess — then weaves the class files, so Run/Debug short-circuits nulls. Maven preprocess + weave stay the source of truth for `mvn test` / `mvn exec:java`. Authoring sources keep `?.`. The mirror moved to `target/opt-chain/sources`, which IDEA does not mark as a source root. The plugin also excludes that folder (and the old `generated-sources/opt-chain` path) on Maven import.
+
+### Install the plugin, then Run
+
+From `opt-chain-idea` (JDK 17):
+
+```bash
+cd opt-chain-idea
+./gradlew buildPlugin
+# zip: opt-chain-idea/build/distributions/opt-chain-idea-0.2.1-SNAPSHOT.zip
+```
+
+1. Settings → Plugins. If an older **Opt Chain** is installed, uninstall it (the previous id was `io.ch.java.opt.chain.idea`) and restart.
+2. Settings → Plugins → ⚙️ → **Install Plugin from Disk…** → select the zip. Restart.
+3. **File → Invalidate Caches… → Invalidate and Restart**.
+4. Maven tool window → **Reload** the project. That drops a stale `target/generated-sources/opt-chain` source root. If it is still listed under Project Structure → Modules → opt-chain-demo → Sources, remove it. `src/main/java` stays the only Java source root for the demo.
+5. Optional once, so the legacy directory is deleted from disk: `mvn -pl opt-chain-demo -am generate-sources` (or `compile`), then reload Maven again.
+6. Run **OptChainDemoMain** (the checked-in run configuration, or the gutter icon on `main`). The build log should include `Opt Chain compiled opt-chain-demo`. Cases 1–11 must not throw; `plainCity(null)` must throw.
+7. `OptChainExamples` has no `main`. Run it by running **OptChainDemoMain**, or run the JUnit class `OptChainExamplesTest`. Building the demo module compiles `OptChainExamples.java` with `?.` still in the editor.
+
+The run configuration is `.idea/runConfigurations/OptChainDemoMain.xml` (module name `opt-chain-demo`, Make before launch). If IDEA names the module differently after import, point the configuration at the demo module.
+
+Without the plugin, IDEA still cannot compile `?.`. Use Maven instead: `mvn -pl opt-chain-demo -am package` then `mvn -pl opt-chain-demo exec:java`.
+
 ## IDEA plugin (`opt-chain-idea`)
 
-Independent Gradle project. It does **not** change the Java language for the compiler; Maven preprocess + weave remain the source of truth for builds.
+Independent Gradle project. Version **0.2.1-SNAPSHOT**. Maven preprocess + weave remain the source of truth for command-line builds. The plugin compiles `?.` inside IDEA by applying that same rewrite and weave before Run/Debug.
 
 ### Build
 
@@ -258,7 +292,7 @@ Lightweight unit tests (no IDE UI):
 ./gradlew test
 ```
 
-There is no prebuilt zip in the repository. Build one with `./gradlew buildPlugin`; the archive is `opt-chain-idea/build/distributions/opt-chain-idea-0.2.0-SNAPSHOT.zip` (that directory is Gradle output and is not committed). Plugin id is `io.github.chensirj.optchain.idea`.
+There is no prebuilt zip in the repository. Build one with `./gradlew buildPlugin`; the archive is `opt-chain-idea/build/distributions/opt-chain-idea-0.2.1-SNAPSHOT.zip` (that directory is Gradle output and is not committed). Plugin id is `io.github.chensirj.optchain.idea`.
 
 ### Install
 
@@ -276,12 +310,13 @@ There is no prebuilt zip in the repository. Build one with `./gradlew buildPlugi
 | Highlighting | `Annotator` + color settings page |
 | Completion | Treat `?.` as `.` temporarily, resolve left-hand type, contribute fields and methods (one heuristic) |
 | Go to declaration | Same rewrite-then-`resolve`. If `resolve()` is empty, fall back to a field (plain `obj?.field`) or method (call) of the qualifier type by name |
+| Compile / Run / Debug | JPS builder rewrites `?.` to `OptChainOps.opt(receiver)` (same as Maven preprocess), compiles with the module JDK, then weaves class files. Roots that contain `?.` are excluded from IDEA's own javac so it never sees the token. |
 
 ### Plugin limitations
 
 - Not a real Java grammar extension; PSI may still be incomplete
 - Completion / navigation are heuristics shared by fields and methods (`?.` is not a separate field grammar); Maven compile is authoritative
-- **0.2.0** changes the plugin id and Java package to `io.github.chensirj.optchain.idea`. Uninstall id `io.ch.java.opt.chain.idea` before installing this build. Editor behavior matches 0.1.2 (shared field/method completion and navigation).
+- **0.2.1** compiles `?.` inside IDEA (rewrite + weave) and keeps the Maven mirror off the IDE source path. **0.2.0** changed the plugin id and Java package to `io.github.chensirj.optchain.idea`. Uninstall id `io.ch.java.opt.chain.idea` before installing this build.
 - Requires the Java plugin (`com.intellij.modules.java`)
 - Eclipse / VS Code are out of scope
 
@@ -303,7 +338,7 @@ Markers travel with the bytecode, so the annotation on the enclosing method is n
 
 ## Known limitations (compiler pipeline)
 
-- Without the IDEA plugin, the editor still flags `?.` as illegal syntax. Maven preprocess is what `javac` compiles.
+- Without the IDEA plugin, the editor still flags `?.` as illegal syntax and IDEA's compiler rejects it. Maven preprocess is what command-line `javac` compiles. Plugin 0.2.1 performs that preprocess and the weave inside the IDEA build; annotation processing is not run for modules the plugin compiles (`-proc:none`).
 - Preprocess is a text scan, not a Java parser. `?.` outside line comments, block comments, and string/char literals is rewritten, whether the next token is a field (`u?.address?.city?.name`) or a call; those spots are covered by `OptChainSourceTransformerTest`. There is no separate text-block mode, so a `"` inside a `"""` block can desync the scan.
 - The receiver walk understands calls, indexes, parenthesized expressions, generic `name<...>`, qualified names, and `new`. It can miss a receiver that is not a postfix expression (for example a lambda used as the receiver).
 - Method detection for inserting `@OptChain` is heuristic. Javadoc such as `{@code @OptChain}` is not treated as the annotation. A missed annotation is still safe when the marker is present: weave keys off `OptChainOps.opt`, not only the annotation.

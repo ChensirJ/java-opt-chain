@@ -86,7 +86,7 @@ public final class OptChainSourceTransformer {
     }
 
     /** Positions of '?' in each {@code ?.} that is outside comments and string/char literals. */
-    static List<Integer> findOptChainPositions(String src) {
+    public static List<Integer> findOptChainPositions(String src) {
         boolean[] code = codeMask(src);
         List<Integer> positions = new ArrayList<>();
         for (int i = 0; i + 1 < src.length(); i++) {
