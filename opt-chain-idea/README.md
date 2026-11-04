@@ -15,7 +15,7 @@ IntelliJ IDEA 插件：让 `java-opt-chain` 工程里的 Java 源码可以直接
 ./gradlew buildPlugin
 ```
 
-产物：`build/distributions/opt-chain-idea-0.1.2-SNAPSHOT.zip`
+产物在 `build/distributions/opt-chain-idea-0.2.0-SNAPSHOT.zip`（Gradle 输出，不要提交到仓库根目录）。插件 id 为 `io.github.chensirj.optchain.idea`。
 
 轻量单测（不启 IDE UI）：
 
@@ -25,9 +25,13 @@ IntelliJ IDEA 插件：让 `java-opt-chain` 工程里的 Java 源码可以直接
 
 ## 安装 / 升级
 
-1. Settings → Plugins → 已安装里若有 **Opt Chain**，先 Disable / Uninstall
+仓库里不再附带预编译 zip。用上面的 `./gradlew buildPlugin` 生成 `build/distributions/` 下的 zip，再从磁盘安装。
+
+0.2.0 更换了插件 id。旧插件 id 是 `io.ch.java.opt.chain.idea`，必须先卸载，否则两套高亮会同时生效。
+
+1. Settings → Plugins → 已安装里若有 **Opt Chain**（尤其是 id `io.ch.java.opt.chain.idea`），先 Uninstall
 2. 重启 IDEA
-3. Settings → Plugins → ⚙️ → Install Plugin from Disk… → 选新 zip
+3. Settings → Plugins → ⚙️ → Install Plugin from Disk… → 选 `opt-chain-idea/build/distributions/` 里的新 zip
 4. 再重启，打开带 `?.` 的 `.java`，红线应消失（`?.` 仍会有特殊高亮）
 
 ## 扩展点
@@ -41,7 +45,7 @@ IntelliJ IDEA 插件：让 `java-opt-chain` 工程里的 Java 源码可以直接
 
 ## 若仍然标红
 
-- Plugins 里确认 **Opt Chain** 已启用，版本为 `0.1.2-SNAPSHOT`
+- Plugins 里确认 **Opt Chain** 已启用，版本为 `0.2.0-SNAPSHOT`，且旧 id `io.ch.java.opt.chain.idea` 已卸载
 - File → Invalidate Caches… → Invalidate and Restart
 - 确认文件是普通 `.java`（不是注入片段 / Scratch 未关联 Java）
 - Settings → Editor → Inspections：看 Problems 工具窗具体报的是哪条（语法 Error 应变少）

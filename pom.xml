@@ -4,12 +4,36 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.ch.java.opt.chain</groupId>
+  <groupId>io.github.chensirj</groupId>
   <artifactId>java-opt-chain</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>0.2.0-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>java-opt-chain</name>
   <description>Compile-time optional chaining (JS ?. style) via ASM bytecode weaving</description>
+  <url>https://github.com/ChensirJ/java-opt-chain</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>ChensirJ</id>
+      <name>ChensirJ</name>
+      <url>https://github.com/ChensirJ</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/ChensirJ/java-opt-chain.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/ChensirJ/java-opt-chain.git</developerConnection>
+    <url>https://github.com/ChensirJ/java-opt-chain</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <modules>
     <module>opt-chain-annotations</module>
@@ -22,12 +46,16 @@
     <maven.compiler.release>17</maven.compiler.release>
     <asm.version>9.7</asm.version>
     <junit.version>5.10.3</junit.version>
+    <!-- Overridden to true in opt-chain-demo so that module is not published. -->
+    <skipPublishing>false</skipPublishing>
+    <!-- Central Portal: leave the deployment pending unless -DautoPublish=true. -->
+    <autoPublish>false</autoPublish>
   </properties>
 
   <dependencyManagement>
     <dependencies>
       <dependency>
-        <groupId>io.ch.java.opt.chain</groupId>
+        <groupId>io.github.chensirj</groupId>
         <artifactId>opt-chain-annotations</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -39,6 +67,16 @@
       <dependency>
         <groupId>org.ow2.asm</groupId>
         <artifactId>asm-commons</artifactId>
+        <version>${asm.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ow2.asm</groupId>
+        <artifactId>asm-tree</artifactId>
+        <version>${asm.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.ow2.asm</groupId>
+        <artifactId>asm-analysis</artifactId>
         <version>${asm.version}</version>
       </dependency>
       <dependency>
@@ -72,11 +110,77 @@
           <version>3.13.1</version>
         </plugin>
         <plugin>
-          <groupId>io.ch.java.opt.chain</groupId>
+          <groupId>io.github.chensirj</groupId>
           <artifactId>opt-chain-maven-plugin</artifactId>
           <version>${project.version}</version>
         </plugin>
       </plugins>
     </pluginManagement>
   </build>
+
+  <!-- Inactive by default, so a normal build never asks for a GPG key. -->
+  <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-source-plugin</artifactId>
+            <version>3.3.1</version>
+            <executions>
+              <execution>
+                <id>attach-sources</id>
+                <goals>
+                  <goal>jar-no-fork</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>3.11.2</version>
+            <configuration>
+              <release>${maven.compiler.release}</release>
+              <doclint>none</doclint>
+            </configuration>
+            <executions>
+              <execution>
+                <id>attach-javadocs</id>
+                <goals>
+                  <goal>jar</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <version>3.2.7</version>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.sonatype.central</groupId>
+            <artifactId>central-publishing-maven-plugin</artifactId>
+            <version>0.12.0</version>
+            <extensions>true</extensions>
+            <configuration>
+              <publishingServerId>central</publishingServerId>
+              <autoPublish>${autoPublish}</autoPublish>
+              <skipPublishing>${skipPublishing}</skipPublishing>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

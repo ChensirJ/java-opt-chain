@@ -4,17 +4,47 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.ch.java.opt.chain</groupId>
+    <groupId>io.github.chensirj</groupId>
     <artifactId>java-opt-chain</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.2.0-SNAPSHOT</version>
   </parent>
   <artifactId>opt-chain-demo</artifactId>
   <name>opt-chain-demo</name>
   <description>Demo entities and tests for ?. preprocess + @OptChain weaving</description>
+  <url>https://github.com/ChensirJ/java-opt-chain</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>ChensirJ</id>
+      <name>ChensirJ</name>
+      <url>https://github.com/ChensirJ</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/ChensirJ/java-opt-chain.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/ChensirJ/java-opt-chain.git</developerConnection>
+    <url>https://github.com/ChensirJ/java-opt-chain</url>
+    <tag>HEAD</tag>
+  </scm>
+
+  <properties>
+    <!-- Sample module: do not deploy or include it in a Central Portal bundle. -->
+    <maven.deploy.skip>true</maven.deploy.skip>
+    <skipPublishing>true</skipPublishing>
+  </properties>
 
   <dependencies>
     <dependency>
-      <groupId>io.ch.java.opt.chain</groupId>
+      <groupId>io.github.chensirj</groupId>
       <artifactId>opt-chain-annotations</artifactId>
     </dependency>
     <dependency>
@@ -27,7 +57,7 @@
   <build>
     <plugins>
       <plugin>
-        <groupId>io.ch.java.opt.chain</groupId>
+        <groupId>io.github.chensirj</groupId>
         <artifactId>opt-chain-maven-plugin</artifactId>
         <version>${project.version}</version>
         <executions>
@@ -66,7 +96,7 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.5.0</version>
         <configuration>
-          <mainClass>io.ch.java.opt.chain.demo.OptChainDemoMain</mainClass>
+          <mainClass>io.github.chensirj.optchain.demo.OptChainDemoMain</mainClass>
         </configuration>
       </plugin>
     </plugins>

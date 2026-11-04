@@ -1,5 +1,5 @@
 <idea-plugin>
-  <id>io.ch.java.opt.chain.idea</id>
+  <id>io.github.chensirj.optchain.idea</id>
   <name>Opt Chain</name>
   <vendor>example</vendor>
   <description><![CDATA[
@@ -15,6 +15,7 @@
     <p>Compatible with IntelliJ IDEA 2024.1+ through 2025.2 (build 241–252+).</p>
   ]]></description>
   <change-notes><![CDATA[
+    <p>0.2.0 — Plugin id and implementation package are now io.github.chensirj.optchain.idea. Uninstall the old plugin (id io.ch.java.opt.chain.idea) before installing this build. Editor behavior is unchanged from 0.1.2.</p>
     <p>0.1.2 — Field chains share completion and navigation with methods. Go to Declaration falls back to a field of the qualifier type when resolve() is empty. Highlight filters unchanged.</p>
     <p>0.1.1 — Stronger red-squiggle suppression (HighlightInfoFilter + wider ?. matching); explicit 2025.2 / build 252 support.</p>
     <p>0.1.0 — Initial release: error filter, highlight, completion, navigation.</p>
@@ -24,12 +25,12 @@
   <depends>com.intellij.modules.java</depends>
 
   <extensions defaultExtensionNs="com.intellij">
-    <highlightErrorFilter implementation="io.ch.java.opt.chain.idea.OptChainHighlightErrorFilter"/>
-    <daemon.highlightInfoFilter implementation="io.ch.java.opt.chain.idea.OptChainHighlightInfoFilter"/>
-    <annotator language="JAVA" implementationClass="io.ch.java.opt.chain.idea.OptChainAnnotator"/>
+    <highlightErrorFilter implementation="io.github.chensirj.optchain.idea.OptChainHighlightErrorFilter"/>
+    <daemon.highlightInfoFilter implementation="io.github.chensirj.optchain.idea.OptChainHighlightInfoFilter"/>
+    <annotator language="JAVA" implementationClass="io.github.chensirj.optchain.idea.OptChainAnnotator"/>
     <completion.contributor language="JAVA"
-                            implementationClass="io.ch.java.opt.chain.idea.OptChainCompletionContributor"/>
-    <gotoDeclarationHandler implementation="io.ch.java.opt.chain.idea.OptChainGotoDeclarationHandler"/>
-    <colorSettingsPage implementation="io.ch.java.opt.chain.idea.OptChainColorSettingsPage"/>
+                            implementationClass="io.github.chensirj.optchain.idea.OptChainCompletionContributor"/>
+    <gotoDeclarationHandler implementation="io.github.chensirj.optchain.idea.OptChainGotoDeclarationHandler"/>
+    <colorSettingsPage implementation="io.github.chensirj.optchain.idea.OptChainColorSettingsPage"/>
   </extensions>
 </idea-plugin>
