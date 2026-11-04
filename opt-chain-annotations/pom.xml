@@ -4,11 +4,35 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.ch.java.opt.chain</groupId>
+    <groupId>io.github.chensirj</groupId>
     <artifactId>java-opt-chain</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.2.0-SNAPSHOT</version>
   </parent>
   <artifactId>opt-chain-annotations</artifactId>
   <name>opt-chain-annotations</name>
   <description>@OptChain annotation for optional-chain bytecode weaving</description>
+  <url>https://github.com/ChensirJ/java-opt-chain</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>ChensirJ</id>
+      <name>ChensirJ</name>
+      <url>https://github.com/ChensirJ</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/ChensirJ/java-opt-chain.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/ChensirJ/java-opt-chain.git</developerConnection>
+    <url>https://github.com/ChensirJ/java-opt-chain</url>
+    <tag>HEAD</tag>
+  </scm>
 </project>

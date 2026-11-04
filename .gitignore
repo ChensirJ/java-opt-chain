@@ -4,3 +4,7 @@ target/
 .classpath
 .project
 .settings/
+
+# Prebuilt plugin archives are local build output, not source.
+*.zip
+*.tgz

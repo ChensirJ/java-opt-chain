@@ -3,8 +3,8 @@ plugins {
     id("org.jetbrains.intellij.platform") version "2.1.0"
 }
 
-group = "io.ch.java.opt.chain"
-version = "0.1.2-SNAPSHOT"
+group = "io.github.chensirj"
+version = "0.2.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -32,7 +32,7 @@ dependencies {
 
 intellijPlatform {
     pluginConfiguration {
-        id = "io.ch.java.opt.chain.idea"
+        id = "io.github.chensirj.optchain.idea"
         name = "Opt Chain"
         version = project.version.toString()
         ideaVersion {

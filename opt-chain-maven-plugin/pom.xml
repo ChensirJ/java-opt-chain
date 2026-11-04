@@ -4,18 +4,42 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>io.ch.java.opt.chain</groupId>
+    <groupId>io.github.chensirj</groupId>
     <artifactId>java-opt-chain</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.2.0-SNAPSHOT</version>
   </parent>
   <artifactId>opt-chain-maven-plugin</artifactId>
   <packaging>maven-plugin</packaging>
   <name>opt-chain-maven-plugin</name>
   <description>Preprocess ?. syntax and ASM-weave @OptChain methods</description>
+  <url>https://github.com/ChensirJ/java-opt-chain</url>
+
+  <licenses>
+    <license>
+      <name>Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+
+  <developers>
+    <developer>
+      <id>ChensirJ</id>
+      <name>ChensirJ</name>
+      <url>https://github.com/ChensirJ</url>
+    </developer>
+  </developers>
+
+  <scm>
+    <connection>scm:git:https://github.com/ChensirJ/java-opt-chain.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/ChensirJ/java-opt-chain.git</developerConnection>
+    <url>https://github.com/ChensirJ/java-opt-chain</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <dependencies>
     <dependency>
-      <groupId>io.ch.java.opt.chain</groupId>
+      <groupId>io.github.chensirj</groupId>
       <artifactId>opt-chain-annotations</artifactId>
     </dependency>
     <dependency>
@@ -25,6 +49,14 @@
     <dependency>
       <groupId>org.ow2.asm</groupId>
       <artifactId>asm-commons</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm-tree</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.ow2.asm</groupId>
+      <artifactId>asm-analysis</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.maven</groupId>
