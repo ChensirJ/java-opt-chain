@@ -1,0 +1,5 @@
+<idea-plugin>
+  <extensions defaultExtensionNs="org.jetbrains.idea.maven.importing">
+    <workspaceConfigurator implementation="io.github.chensirj.optchain.idea.OptChainMavenWorkspaceConfigurator"/>
+  </extensions>
+</idea-plugin>

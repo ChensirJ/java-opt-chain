@@ -1,5 +1,7 @@
 target/
-.idea/
+.idea/*
+!.idea/runConfigurations/
+!.idea/runConfigurations/**
 *.iml
 .classpath
 .project

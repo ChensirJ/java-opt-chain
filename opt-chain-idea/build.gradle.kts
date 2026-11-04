@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "io.github.chensirj"
-version = "0.2.0-SNAPSHOT"
+version = "0.2.1-SNAPSHOT"
 
 repositories {
     mavenCentral()
@@ -24,10 +24,27 @@ dependencies {
         // Build against 2024.1 APIs; runtime supports through 2025.2 (252.*) via open untilBuild.
         intellijIdeaCommunity("2024.1.7")
         bundledPlugin("com.intellij.java")
+        bundledPlugin("org.jetbrains.idea.maven")
         instrumentationTools()
         pluginVerifier()
     }
+    // Weaver bytecode rewrite. Packaged next to the plugin jar and added to the JPS classpath.
+    implementation("org.ow2.asm:asm:9.7")
+    implementation("org.ow2.asm:asm-commons:9.7")
+    implementation("org.ow2.asm:asm-tree:9.7")
+    implementation("org.ow2.asm:asm-analysis:9.7")
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.3")
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir("../opt-chain-annotations/src/main/java")
+            srcDir("../opt-chain-maven-plugin/src/main/java")
+            exclude("**/OptChainPreprocessMojo.java")
+            exclude("**/OptChainWeaveMojo.java")
+        }
+    }
 }
 
 intellijPlatform {

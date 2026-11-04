@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="OptChainDemoMain" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="io.github.chensirj.optchain.demo.OptChainDemoMain" />
+    <module name="opt-chain-demo" />
+    <shortenClasspath name="NONE" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
