@@ -9,7 +9,7 @@ import org.apache.maven.plugins.annotations.Parameter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.List;
 import java.util.stream.Stream;
 
 /**
@@ -38,30 +38,34 @@ public class OptChainWeaveMojo extends AbstractMojo {
         }
 
         Path root = outputDirectory.toPath();
-        AtomicInteger rewritten = new AtomicInteger();
-        AtomicInteger scanned = new AtomicInteger();
-
+        List<Path> classFiles;
         try (Stream<Path> walk = Files.walk(root)) {
-            walk.filter(p -> p.toString().endsWith(".class"))
-                    .forEach(path -> {
-                        scanned.incrementAndGet();
-                        try {
-                            byte[] original = Files.readAllBytes(path);
-                            byte[] woven = OptChainWeaver.weave(original);
-                            if (woven != null) {
-                                Files.write(path, woven);
-                                rewritten.incrementAndGet();
-                                getLog().info("opt-chain:woven " + root.relativize(path));
-                            }
-                        } catch (IOException e) {
-                            throw new RuntimeException("Failed to weave " + path, e);
-                        }
-                    });
-        } catch (IOException | RuntimeException e) {
-            throw new MojoExecutionException("opt-chain weave failed", e);
+            classFiles = walk.filter(p -> p.toString().endsWith(".class")).toList();
+        } catch (IOException e) {
+            throw new MojoExecutionException("opt-chain weave failed walking " + root, e);
         }
 
-        getLog().info("opt-chain:weave scanned " + scanned.get()
-                + " class file(s), rewrote " + rewritten.get());
+        int rewritten = 0;
+        int scanned = 0;
+        for (Path path : classFiles) {
+            String rel = root.relativize(path).toString().replace('\\', '/');
+            scanned++;
+            try {
+                byte[] original = Files.readAllBytes(path);
+                byte[] woven = OptChainWeaver.weave(original);
+                if (woven != null) {
+                    Files.write(path, woven);
+                    rewritten++;
+                    getLog().info("opt-chain:woven " + rel);
+                } else {
+                    getLog().debug("opt-chain:weave skipping " + rel + " (no @OptChain)");
+                }
+            } catch (IOException | RuntimeException e) {
+                throw new MojoExecutionException("opt-chain weave failed for " + rel, e);
+            }
+        }
+
+        getLog().info("opt-chain:weave scanned " + scanned
+                + " class file(s), rewrote " + rewritten);
     }
 }

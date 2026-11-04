@@ -86,18 +86,15 @@ public class OptChainPreprocessMojo extends AbstractMojo {
                 continue;
             }
 
-            try {
-                if (!rootContainsOptChain(root)) {
-                    continue;
-                }
-                rootsToReplace.add(rootStr);
-                MirrorResult mirrored = mirrorRoot(root, outRoot);
-                anyTransformed = true;
-                transformedFiles += mirrored.transformedFiles;
-                replacements += mirrored.replacements;
-            } catch (IOException e) {
-                throw new MojoExecutionException("opt-chain preprocess failed for " + root, e);
+            if (!rootContainsOptChain(root)) {
+                getLog().debug("opt-chain:preprocess skipping " + root + " (no ?.)");
+                continue;
             }
+            rootsToReplace.add(rootStr);
+            MirrorResult mirrored = mirrorRoot(root, outRoot);
+            anyTransformed = true;
+            transformedFiles += mirrored.transformedFiles;
+            replacements += mirrored.replacements;
         }
 
         if (!anyTransformed) {
@@ -126,36 +123,48 @@ public class OptChainPreprocessMojo extends AbstractMojo {
                 + replacements + " ?. → .)");
     }
 
-    private static boolean rootContainsOptChain(Path root) throws IOException {
+    private boolean rootContainsOptChain(Path root) throws MojoExecutionException {
+        List<Path> javaFiles;
         try (Stream<Path> walk = Files.walk(root)) {
-            return walk
+            javaFiles = walk
                     .filter(p -> p.toString().endsWith(".java"))
                     .filter(Files::isRegularFile)
-                    .anyMatch(p -> {
-                        try {
-                            String content = Files.readString(p, StandardCharsets.UTF_8);
-                            return !OptChainSourceTransformer.findOptChainPositions(content).isEmpty();
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-        } catch (RuntimeException e) {
-            if (e.getCause() instanceof IOException ioe) {
-                throw ioe;
-            }
-            throw e;
+                    .toList();
+        } catch (IOException e) {
+            throw new MojoExecutionException("opt-chain preprocess failed for " + root, e);
         }
+        for (Path javaFile : javaFiles) {
+            String rel = portableRelative(root, javaFile);
+            try {
+                String content = Files.readString(javaFile, StandardCharsets.UTF_8);
+                if (!OptChainSourceTransformer.findOptChainPositions(content).isEmpty()) {
+                    return true;
+                }
+            } catch (IOException | RuntimeException e) {
+                throw new MojoExecutionException(
+                        "opt-chain preprocess failed for " + rel + " under " + root, e);
+            }
+        }
+        return false;
     }
 
-    private MirrorResult mirrorRoot(Path root, Path outRoot) throws IOException {
+    private MirrorResult mirrorRoot(Path root, Path outRoot) throws MojoExecutionException {
         int transformed = 0;
         int replacements = 0;
+        List<Path> files;
         try (Stream<Path> walk = Files.walk(root)) {
-            List<Path> files = walk.filter(Files::isRegularFile).toList();
-            for (Path src : files) {
-                Path relative = root.relativize(src);
-                Path dest = outRoot.resolve(relative);
-                Files.createDirectories(dest.getParent());
+            files = walk.filter(Files::isRegularFile).toList();
+        } catch (IOException e) {
+            throw new MojoExecutionException("opt-chain preprocess failed for " + root, e);
+        }
+        for (Path src : files) {
+            String rel = portableRelative(root, src);
+            Path dest = outRoot.resolve(root.relativize(src));
+            try {
+                Path parent = dest.getParent();
+                if (parent != null) {
+                    Files.createDirectories(parent);
+                }
                 if (src.toString().endsWith(".java")) {
                     String content = Files.readString(src, StandardCharsets.UTF_8);
                     OptChainSourceTransformer.Result result = OptChainSourceTransformer.transform(content);
@@ -163,7 +172,7 @@ public class OptChainPreprocessMojo extends AbstractMojo {
                         Files.writeString(dest, result.source(), StandardCharsets.UTF_8);
                         transformed++;
                         replacements += result.replacements();
-                        getLog().info("opt-chain:preprocess " + relative.toString().replace('\\', '/')
+                        getLog().info("opt-chain:preprocess " + rel
                                 + " (" + result.replacements() + " ?. → .)");
                     } else {
                         Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
@@ -171,9 +180,16 @@ public class OptChainPreprocessMojo extends AbstractMojo {
                 } else {
                     Files.copy(src, dest, StandardCopyOption.REPLACE_EXISTING);
                 }
+            } catch (IOException | RuntimeException e) {
+                throw new MojoExecutionException(
+                        "opt-chain preprocess failed for " + rel + " under " + root, e);
             }
         }
         return new MirrorResult(transformed, replacements);
+    }
+
+    private static String portableRelative(Path root, Path file) {
+        return root.relativize(file).toString().replace('\\', '/');
     }
 
     private record MirrorResult(int transformedFiles, int replacements) {
